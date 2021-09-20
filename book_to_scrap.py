@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import csv
 import nums_from_string
 from urllib.parse import urlparse
+import pandas as pd
 
 Rating_Table = {
     "One": 1,
@@ -11,6 +12,7 @@ Rating_Table = {
     "Four": 4,
     "Five": 5
     }
+
 
 def get_in_soup(url):
         # lien de la page à scrapper
@@ -21,33 +23,40 @@ def get_in_soup(url):
 	return BeautifulSoup(page, "html.parser")
 
 
+universal_product_code_UPC = []
+title_product = []
+price_including_tax = []
+price_excluding_tax = []
+number_available = []
+product_description = []
+category = []
+review_rating = []
+image_url = []
+results = []
+
 # récupère les titres ou descriptions comme liste de strings
 def extraire_donnees(elements):
-	universal_product_code = []
-    title_product = []
-    price_including_tax = []
-    price_excluding_tax = []
-    number_available = []
-    product_description = []
-    category = []
-    review_rating = []
-    image_url = []
-    results = []
     global url
 
-	for element in elements:
+    for element in elements:
 
         soup = get_in_soup(element)
 
-        universal_product_code.append(soup.find("th" , text="UPC" ).next_sibling)
+        universal_product_code_UPC.append(soup.find("th" , text="UPC" ).next_sibling.text)
         title_product.append(soup.h1.string)
-        price_including_tax.append(soup.find("th" , text="Price (incl. tax)" ).next_sibling)
-        price_excluding_tax.append(soup.find("th" , text="Price (excl. tax)" ).next_sibling)
+        price_including_tax.append(soup.find("th" , text="Price (incl. tax)" ).next_sibling.text)
+        price_excluding_tax.append(soup.find("th" , text="Price (excl. tax)" ).next_sibling.text)
         
         availability = soup.find("p" , class_="instock availability").text
-        number_available.append(nums_from_string.get_nums(availability))
+        try:
+            number_available.append(nums_from_string.get_nums(availability))
+        except:
+            number_available.append(0)
 
-        product_description.append(soup.find( id="product_description" ).next_sibling.next_sibling)
+        try:
+            product_description.append(soup.find( id="product_description" ).next_sibling.next_sibling.text)
+        except:
+            product_description.append("")
 
         test = soup.find("ul" , class_="breadcrumb" )
         cat = test.findAll("a")[2].text
@@ -58,9 +67,10 @@ def extraire_donnees(elements):
         review_rating.append(Rating_Table[rating])
 
         img = soup.find("div" , class_="item active").img.get_attribute_list("src")
-        image_url.append(img.replace("../..", urlparse(element).netloc))
+        site_url = urlparse(element).netloc
+        img_url = img[0].replace("../..", site_url)
+        image_url.append(img_url)
 
-    return results = [elements, universal_product_code, title_product, price_including_tax, price_excluding_tax, number_available, product_description, category, review_rating, image_url ]
 
 
 # charger la donnée dans un fichier csv
@@ -104,22 +114,24 @@ product_page_url = get_all_urls(url)
 
 datas = extraire_donnees(product_page_url)
 
-en_tetes = [ 
-"product_page_url",
-"universal_product_code (upc)",
-"title",
-"price_including_tax",
-"price_excluding_tax",
-"number_available",
-"product_description",
-"category",
-"review_rating",
-"image_url"
-]
 
-with open(datas.csv, 'w') as fichier_csv:
+# print(datas)
+
+with open('datas.csv', 'w') as fichier_csv:
+    en_tetes = [ 
+    "product_page_url",
+    "universal_product_code_UPC (upc)",
+    "title",
+    "price_including_tax",
+    "price_excluding_tax",
+    "number_available",
+    "product_description",
+    "category",
+    "review_rating",
+    "image_url"
+    ]
     writer = csv.writer(fichier_csv, delimiter=',')
     writer.writerow(en_tetes)
-    # zip permet d'itérer sur deux listes à la fois
-    for data in datas:
-        writer.writerow(data)
+    for i in range(len(product_page_url)):
+        ligne = [product_page_url[i], universal_product_code_UPC[i], title_product[i], price_including_tax[i], price_excluding_tax[i], number_available[i], product_description[i], category[i], review_rating[i], image_url[i]]
+        writer.writerow(ligne)
