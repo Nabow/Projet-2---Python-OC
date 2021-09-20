@@ -11,6 +11,15 @@ def extraire_donnees(elements):
 	return resultat
 
 
+def get_in_soup(url):
+        # lien de la page à scrapper
+	reponse = requests.get(url)
+	page = reponse.content
+
+	# transforme (parse) le HTML en objet BeautifulSoup
+	return BeautifulSoup(page, "html.parser")
+
+
 # charger la donnée dans un fichier csv
 def charger_donnees(nom_fichier, en_tete, titres, descriptions):
 	with open(nom_fichier, 'w') as fichier_csv:
@@ -20,38 +29,49 @@ def charger_donnees(nom_fichier, en_tete, titres, descriptions):
 		for titre, description in zip(titres, descriptions):
 			writer.writerow([titre, description])
 
-def etl():
-	# lien de la page à scrapper
-	url = "https://www.gov.uk/search/news-and-communications"
-	reponse = requests.get(url)
-	page = reponse.content
 
-	# transforme (parse) le HTML en objet BeautifulSoup
-	soup = BeautifulSoup(page, "html.parser")
+def scroll_page():
+    print()
+    
 
-	# récupération de tous les titres
-	titres = soup.find_all("a", class_="gem-c-document-list__item-link")
-	# récupération de toutes les descriptions
-	descriptions = soup.find_all("p", class_="gem-c-document-list__item-description")
+def get_all_urls(url):
+    page = url + "page-1.html"
 
-	en_tete = ["title", "description"]
-	titres = extraire_donnees(titres)
-	descriptions = extraire_donnees(descriptions)
-	charger_donnees("data.csv", en_tete, titres, descriptions)
+    table_urls = []
+
+    while (page):
+        
+        soup = get_in_soup(page)
+
+        products = soup.find_all("h3")  
+        for product in products:
+            table_urls.append( url + product.find("a").get('href') )
+
+        try:
+            page = soup.find("li", class_="next").a.get('href')
+        except:
+            return table_urls
+        else:
+            page = url + page
 
 
-etl()
 
 
-en_tetes = [ 
-"product_page_url",
-"universal_product_code (upc)",
-"title",
-"price_including_tax",
-"price_excluding_tax",
-"number_available",
-"product_description",
-"category",
-"review_rating",
-"image_url"
-]
+table_urls = get_all_urls('http://books.toscrape.com/catalogue/')
+
+extraire_donnees(table_urls)
+
+
+
+# en_tetes = [ 
+# "product_page_url",
+# "universal_product_code (upc)",
+# "title",
+# "price_including_tax",
+# "price_excluding_tax",
+# "number_available",
+# "product_description",
+# "category",
+# "review_rating",
+# "image_url"
+# ]
