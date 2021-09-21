@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import csv
 import nums_from_string
 from urllib.parse import urlparse
-import pandas as pd
+# import pandas as pd
 
 Rating_Table = {
     "One": 1,
@@ -44,12 +44,13 @@ def extraire_donnees(elements):
 
         universal_product_code_UPC.append(soup.find("th" , text="UPC" ).next_sibling.text)
         title_product.append(soup.h1.string)
-        price_including_tax.append(soup.find("th" , text="Price (incl. tax)" ).next_sibling.text)
-        price_excluding_tax.append(soup.find("th" , text="Price (excl. tax)" ).next_sibling.text)
+
+        price_including_tax.append(nums_from_string.get_nums(soup.find("th" , text="Price (incl. tax)" ).next_sibling.text)[0])
+        price_excluding_tax.append(nums_from_string.get_nums(soup.find("th" , text="Price (excl. tax)" ).next_sibling.text)[0])
         
         availability = soup.find("p" , class_="instock availability").text
         try:
-            number_available.append(nums_from_string.get_nums(availability))
+            number_available.append(nums_from_string.get_nums(availability)[0])
         except:
             number_available.append(0)
 
@@ -87,12 +88,12 @@ def scroll_page():
     print()
     
 
-def get_all_urls(url):
+def get_all_urls(url, nb_page = 100000000):
     page = url + "page-1.html"
 
     product_page_url = []
-
-    while (page):
+    i=0
+    while (i<nb_page):
         
         soup = get_in_soup(page)
 
@@ -103,9 +104,11 @@ def get_all_urls(url):
         try:
             page = soup.find("li", class_="next").a.get('href')
         except:
-            return product_page_url
+            break
         else:
             page = url + page
+            i += 1
+    return product_page_url
 
 
 url='http://books.toscrape.com/catalogue/'
@@ -117,7 +120,7 @@ datas = extraire_donnees(product_page_url)
 
 # print(datas)
 
-with open('datas.csv', 'w') as fichier_csv:
+with open('datas.csv', 'w', newline='') as fichier_csv:
     en_tetes = [ 
     "product_page_url",
     "universal_product_code_UPC (upc)",
@@ -130,8 +133,11 @@ with open('datas.csv', 'w') as fichier_csv:
     "review_rating",
     "image_url"
     ]
-    writer = csv.writer(fichier_csv, delimiter=',')
+    writer = csv.writer(fichier_csv, delimiter=';')
     writer.writerow(en_tetes)
     for i in range(len(product_page_url)):
-        ligne = [product_page_url[i], universal_product_code_UPC[i], title_product[i], price_including_tax[i], price_excluding_tax[i], number_available[i], product_description[i], category[i], review_rating[i], image_url[i]]
+        ligne = [str(product_page_url[i]), universal_product_code_UPC[i], str(title_product[i]), price_including_tax[i], price_excluding_tax[i], number_available[i], str(product_description[i]), category[i], review_rating[i], str(image_url[i])]
+        # ligne = ligne.text.encode('utf8').decode('ascii', 'ignore')
+        # ligne = str(ligne)
         writer.writerow(ligne)
+        
