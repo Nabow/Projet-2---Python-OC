@@ -115,27 +115,26 @@ def get_all_urls(url, nb_page=100000000):
 
 
 
-# print(datas)
-
-with open('datas.csv', 'w', newline='', encoding="utf-8") as fichier_csv:
-    en_tetes = [
-        "product_page_url",
-        "universal_product_code_UPC (upc)",
-        "title",
-        "price_including_tax",
-        "price_excluding_tax",
-        "number_available",
-        "product_description",
-        "category",
-        "review_rating",
-        "image_url"
-    ]
-    writer = csv.writer(fichier_csv, delimiter=';')
-    writer.writerow(en_tetes)
-    for i in range(len(product_page_url)):
-        ligne = [str(product_page_url[i]), universal_product_code_UPC[i], str(title_product[i]), price_including_tax[i],
-                 price_excluding_tax[i], number_available[i], str(product_description[i]), category[i],
-                 review_rating[i], str(image_url[i])]
-        # ligne = ligne.text.encode('utf8').decode('ascii', 'ignore')
-        # ligne = str(ligne)
-        writer.writerow(ligne)
+def put_datas_csv(product_page_url):
+    with open('datas.csv', 'w', newline='', encoding="utf-8") as fichier_csv:
+        en_tetes = [
+            "product_page_url",
+            "universal_product_code_UPC (upc)",
+            "title",
+            "price_including_tax",
+            "price_excluding_tax",
+            "number_available",
+            "product_description",
+            "category",
+            "review_rating",
+            "image_url"
+        ]
+        writer = csv.writer(fichier_csv, delimiter=';')
+        writer.writerow(en_tetes)
+        for i in range(len(product_page_url)):
+            ligne = [str(product_page_url[i]), universal_product_code_UPC[i], str(title_product[i]), price_including_tax[i],
+                     price_excluding_tax[i], number_available[i], str(product_description[i]), category[i],
+                     review_rating[i], str(image_url[i])]
+            # ligne = ligne.text.encode('utf8').decode('ascii', 'ignore')
+            # ligne = str(ligne)
+            writer.writerow(ligne)
