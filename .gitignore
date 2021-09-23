@@ -1,1 +1,2 @@
-datas.csv
+# ignore all datas
+*.csv
