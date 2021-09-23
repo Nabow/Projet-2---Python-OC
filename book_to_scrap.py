@@ -15,12 +15,13 @@ Rating_Table = {
 
 
 def get_in_soup(url):
-        # lien de la page à scrapper
-	reponse = requests.get(url)
-	page = reponse.content
+    # lien de la page à scrapper
+    reponse = requests.get(url)
+    reponse.encoding = reponse.apparent_encoding
+    page = reponse.content
 
-	# transforme (parse) le HTML en objet BeautifulSoup
-	return BeautifulSoup(page, "html.parser")
+    # transforme (parse) le HTML en objet BeautifulSoup
+    return BeautifulSoup(page, "html.parser")
 
 
 universal_product_code_UPC = []
@@ -33,6 +34,7 @@ category = []
 review_rating = []
 image_url = []
 results = []
+
 
 # récupère les titres ou descriptions comme liste de strings
 def extraire_donnees(elements):
@@ -63,7 +65,6 @@ def extraire_donnees(elements):
         cat = test.findAll("a")[2].text
         category.append(cat)
 
-
         rating = soup.find("p" , class_="star-rating").attrs["class"][1]
         review_rating.append(Rating_Table[rating])
 
@@ -73,15 +74,14 @@ def extraire_donnees(elements):
         image_url.append(img_url)
 
 
-
 # charger la donnée dans un fichier csv
 def charger_donnees(nom_fichier, en_tete, titres, descriptions):
-	with open(nom_fichier, 'w') as fichier_csv:
-		writer = csv.writer(fichier_csv, delimiter=',')
-		writer.writerow(en_tete)
-		# zip permet d'itérer sur deux listes à la fois
-		for titre, description in zip(titres, descriptions):
-			writer.writerow([titre, description])
+    with open(nom_fichier, 'w') as fichier_csv:
+        writer = csv.writer(fichier_csv, delimiter=',')
+        writer.writerow(en_tete)
+        # zip permet d'itérer sur deux listes à la fois
+        for titre, description in zip(titres, descriptions):
+            writer.writerow([titre, description])
 
 
 def scroll_page():
@@ -89,7 +89,7 @@ def scroll_page():
     
 
 def get_all_urls(url, nb_page = 100000000):
-    page = url + "page-1.html"
+    page = url + "page-14.html"
 
     product_page_url = []
     i=0
@@ -113,14 +113,14 @@ def get_all_urls(url, nb_page = 100000000):
 
 url='http://books.toscrape.com/catalogue/'
 
-product_page_url = get_all_urls(url)
+product_page_url = get_all_urls(url,1)
 
 datas = extraire_donnees(product_page_url)
 
 
 # print(datas)
 
-with open('datas.csv', 'w', newline='') as fichier_csv:
+with open('datas.csv', 'w', newline='', encoding="utf-8") as fichier_csv:
     en_tetes = [ 
     "product_page_url",
     "universal_product_code_UPC (upc)",
