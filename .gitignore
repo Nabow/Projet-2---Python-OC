@@ -1,2 +1,4 @@
 # ignore all datas
 *.csv
+datas/**
+env/**

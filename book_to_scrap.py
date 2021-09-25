@@ -3,8 +3,10 @@ from bs4 import BeautifulSoup
 import csv
 import nums_from_string
 from urllib.parse import urlparse
+import os
+import re
 
-
+# Crée la table de correspondance entre les ranking et une valeur numérique
 Rating_Table = {
     "One": 1,
     "Two": 2,
@@ -13,17 +15,7 @@ Rating_Table = {
     "Five": 5
 }
 
-
-def get_in_soup(url):
-    # lien de la page à scrapper
-    reponse = requests.get(url)
-    reponse.encoding = reponse.apparent_encoding
-    page = reponse.content
-
-    # transforme (parse) le HTML en objet BeautifulSoup
-    return BeautifulSoup(page, "html.parser")
-
-
+# Crée les tableaux qui contiendront les informations de chacune des pages produits
 universal_product_code_UPC = []
 title_product = []
 price_including_tax = []
@@ -36,62 +28,92 @@ image_url = []
 results = []
 
 
-# récupère les titres ou descriptions comme liste de strings
-def extraire_donnees(elements):
-    global url
+def get_in_soup(url):
+    # lien de la page à scrapper
+    reponse = requests.get(url)
+    # On évite les erreurs d'encodage
+    reponse.encoding = reponse.apparent_encoding
+    page = reponse.content
 
+    # transforme (parse) le HTML en objet BeautifulSoup
+    return BeautifulSoup(page, "html.parser")
+
+
+# Vérifie si le dossier en question existe et sinon il le crée
+def check_directory(dir_name):
+    if not (os.path.exists(dir_name)):
+        os.makedirs(dir_name)
+
+
+# Télécharge les images et les stocke dans un dossier
+def download_image(img_url, img_name, img_dir=""):
+    img_data = requests.get(img_url).content
+    if img_dir:
+        check_directory(img_dir)
+    image_path = os.path.join(img_dir, img_name)
+    with open(image_path, 'wb') as handler:
+        handler.write(img_data)
+
+
+# récupère les informations des produits et les stocke dans les tableaux précédement crées
+def extraire_donnees(elements):
+    # Boucle dans chacune des url produit
     for element in elements:
 
         soup = get_in_soup(element)
-
+        # Récupère l'UPC
         universal_product_code_UPC.append(soup.find("th", text="UPC").next_sibling.text)
+        # Récupère le titre du livre
         title_product.append(soup.h1.string)
-
+        # Récupère le prix TTC
         price_including_tax.append(
             nums_from_string.get_nums(soup.find("th", text="Price (incl. tax)").next_sibling.text)[0])
+        # Récupère le prix HT
         price_excluding_tax.append(
             nums_from_string.get_nums(soup.find("th", text="Price (excl. tax)").next_sibling.text)[0])
-
+        # Récupère la quantité en stock et si erreur alors on a pas de stock
         availability = soup.find("p", class_="instock availability").text
         try:
             number_available.append(nums_from_string.get_nums(availability)[0])
         except:
             number_available.append(0)
-
+        # Récupère la description et
         try:
             product_description.append(soup.find(id="product_description").next_sibling.next_sibling.text)
         except:
             product_description.append("")
-
-        test = soup.find("ul", class_="breadcrumb")
-        cat = test.findAll("a")[2].text
+        # Récupère le nom de la catégorie
+        cat = soup.find("ul", class_="breadcrumb")
+        cat = cat.findAll("a")[2].text
         category.append(cat)
-
+        # Récupère le rating
         rating = soup.find("p", class_="star-rating").attrs["class"][1]
         review_rating.append(Rating_Table[rating])
-
+        # Récupère l'url de l'image
         img = soup.find("div", class_="item active").img.get_attribute_list("src")
+        # On récrée l'url absolue à partir de l'url relative
         site_url = urlparse(element).netloc
-        img_url = img[0].replace("../..", site_url)
+        img_url = "https://" + img[0].replace("../..", site_url)
         image_url.append(img_url)
 
+        # Si l'image a une balise alt alors on la récupère pour l'utiliser quand on l'enregistrera
+        try:
+            img_alt = soup.find("div", class_="item active").img.get_attribute_list("alt")[0]
+            img_alt = re.sub('\W+', ' ', img_alt)
+        except:
+            img_alt = ""
+        # On récupère le nom actuel de l'image
+        image_name = os.path.basename(img_url)
+        if img_alt:
+            extension = os.path.splitext(image_name)[1]
+            image_name = str(img_alt) + str(extension)
+        # On enregistre l'image
+        download_image(img_url, image_name, "datas/img")
 
-# charger la donnée dans un fichier csv
-def charger_donnees(nom_fichier, en_tete, titres, descriptions):
-    with open(nom_fichier, 'w') as fichier_csv:
-        writer = csv.writer(fichier_csv, delimiter=',')
-        writer.writerow(en_tete)
-        # zip permet d'itérer sur deux listes à la fois
-        for titre, description in zip(titres, descriptions):
-            writer.writerow([titre, description])
 
-
-def scroll_page():
-    print()
-
-
+# On récupère les urls de tous les livres du site
 def get_all_urls(url, nb_page=100000000):
-    page = url + "page-14.html"
+    page = url + "page-1.html"
 
     product_page_url = []
     i = 0
@@ -113,10 +135,12 @@ def get_all_urls(url, nb_page=100000000):
     return product_page_url
 
 
-
-
+# On met toutes les valeurs dans un fichier CSV
 def put_datas_csv(product_page_url):
-    with open('datas.csv', 'w', newline='', encoding="utf-8") as fichier_csv:
+    dir_datas = "datas"
+    check_directory(dir_datas)
+    abs_file_path = os.path.join(dir_datas, "datas.csv")
+    with open(abs_file_path, 'w', newline='', encoding="utf-8") as fichier_csv:
         en_tetes = [
             "product_page_url",
             "universal_product_code_UPC (upc)",
@@ -135,6 +159,4 @@ def put_datas_csv(product_page_url):
             ligne = [str(product_page_url[i]), universal_product_code_UPC[i], str(title_product[i]), price_including_tax[i],
                      price_excluding_tax[i], number_available[i], str(product_description[i]), category[i],
                      review_rating[i], str(image_url[i])]
-            # ligne = ligne.text.encode('utf8').decode('ascii', 'ignore')
-            # ligne = str(ligne)
             writer.writerow(ligne)
