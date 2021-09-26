@@ -1,9 +1,11 @@
-import book_to_scrap as bts
+import extract_mode
+import get_input
+
 
 if __name__ == '__main__':
-
     url = 'http://books.toscrape.com/catalogue/'
-    product_page_url = bts.get_all_urls(url)
-    datas = bts.extraire_donnees(product_page_url)
-    bts.put_datas_csv(product_page_url)
+    mode = get_input.choose_mode()
+    extract_mode.extract_mode(mode, url)
+
     print("Et voilà le travail !")
+

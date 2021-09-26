@@ -62,7 +62,8 @@ def extraire_donnees(elements):
 
         soup = get_in_soup(element)
         # Récupère l'UPC
-        universal_product_code_UPC.append(soup.find("th", text="UPC").next_sibling.text)
+        upc = soup.find("th", text="UPC").next_sibling.text
+        universal_product_code_UPC.append(upc)
         # Récupère le titre du livre
         title_product.append(soup.h1.string)
         # Récupère le prix TTC
@@ -107,39 +108,16 @@ def extraire_donnees(elements):
         if img_alt:
             extension = os.path.splitext(image_name)[1]
             image_name = str(img_alt) + str(extension)
+        image_name = upc + " - " + image_name
         # On enregistre l'image
         download_image(img_url, image_name, "datas/img")
 
 
-# On récupère les urls de tous les livres du site
-def get_all_urls(url, nb_page=100000000):
-    page = url + "page-1.html"
-
-    product_page_url = []
-    i = 0
-    while (i < nb_page):
-
-        soup = get_in_soup(page)
-
-        products = soup.find_all("h3")
-        for product in products:
-            product_page_url.append(url + product.find("a").get('href'))
-
-        try:
-            page = soup.find("li", class_="next").a.get('href')
-        except:
-            break
-        else:
-            page = url + page
-            i += 1
-    return product_page_url
-
-
 # On met toutes les valeurs dans un fichier CSV
-def put_datas_csv(product_page_url):
+def put_datas_csv(product_page_url, file_name="datas.csv"):
     dir_datas = "datas"
     check_directory(dir_datas)
-    abs_file_path = os.path.join(dir_datas, "datas.csv")
+    abs_file_path = os.path.join(dir_datas, file_name)
     with open(abs_file_path, 'w', newline='', encoding="utf-8") as fichier_csv:
         en_tetes = [
             "product_page_url",
@@ -156,7 +134,8 @@ def put_datas_csv(product_page_url):
         writer = csv.writer(fichier_csv, delimiter=';')
         writer.writerow(en_tetes)
         for i in range(len(product_page_url)):
-            ligne = [str(product_page_url[i]), universal_product_code_UPC[i], str(title_product[i]), price_including_tax[i],
+            ligne = [str(product_page_url[i]), universal_product_code_UPC[i], str(title_product[i]),
+                     price_including_tax[i],
                      price_excluding_tax[i], number_available[i], str(product_description[i]), category[i],
                      review_rating[i], str(image_url[i])]
             writer.writerow(ligne)
